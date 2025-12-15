@@ -1,9 +1,13 @@
-import "./App.css";
+import { useState } from "react";
+
+import { Calendar, Check, Edit2, Moon, Plus, Sun, Trash2 } from "lucide-react";
+
+import { useTaskManager } from "./hooks/useTaskManager";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -11,15 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Edit2, Trash2, Moon, Sun, Calendar, Check } from "lucide-react";
-import { useState } from "react";
-import { TaskManager, type Task } from "./TaskManager";
 
-const taskList = new TaskManager();
+import "./App.css";
 
 function App() {
+  const { tasks, addTask, deleteTask, toggleTask, editTask } = useTaskManager();
+
   const [isDark, setIsDark] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>(taskList.getTasks());
   const [filter, setFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("newest");
   const [newTaskText, setNewTaskText] = useState("");
@@ -27,24 +29,29 @@ function App() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingText, setEditingText] = useState("");
 
-  // Переключение темы
+  const addNewTask = () => {
+    if (newTaskText.trim() === "") {
+      setIsError(true);
+      return;
+    }
+    addTask(newTaskText);
+    setNewTaskText("");
+    setIsError(false);
+  };
+
   const toggleTheme = () => {
     setIsDark(!isDark);
     document.documentElement.classList.toggle("dark");
   };
 
-  // Фильтрация задач
   const getFilteredTasks = () => {
     let filtered = [...tasks];
-
-    // Применяем фильтр
     if (filter === "completed") {
       filtered = filtered.filter((task) => task.completed);
     } else if (filter === "active") {
       filtered = filtered.filter((task) => !task.completed);
     }
 
-    // Применяем сортировку
     if (sortOrder === "newest") {
       filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } else {
@@ -58,13 +65,8 @@ function App() {
   const completedCount = tasks.filter((t) => t.completed).length;
   const totalCount = tasks.length;
 
-  function editTask(id: number, text: string) {
-    throw new Error("Function not implemented.");
-  }
-
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
-      {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -101,9 +103,7 @@ function App() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Форма добавления задачи */}
         <Card className="mb-8 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -122,14 +122,7 @@ function App() {
               <Button
                 className="px-6"
                 onClick={() => {
-                  if (newTaskText.trim() === "") {
-                    setIsError(true);
-                    return;
-                  }
-                  taskList.addTask(newTaskText);
-                  setNewTaskText("");
-                  setTasks([...taskList.getTasks()]);
-                  setIsError(false);
+                  addNewTask();
                 }}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -144,7 +137,6 @@ function App() {
           </CardContent>
         </Card>
 
-        {/* Фильтры и сортировка */}
         <div className="flex flex-wrap gap-4 mb-6 items-center">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground">
@@ -191,7 +183,6 @@ function App() {
           </div>
         </div>
 
-        {/* Список задач */}
         <div className="space-y-3">
           {filteredTasks.length === 0 ? (
             <Card className="p-12 text-center">
@@ -213,17 +204,14 @@ function App() {
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
-                    {/* Чекбокс */}
                     <Checkbox
                       onCheckedChange={() => {
-                        taskList.toggleTask(task.id);
-                        setTasks([...taskList.getTasks()]);
+                        toggleTask(task.id);
                       }}
                       checked={task.completed}
                       className="h-5 w-5"
                     />
 
-                    {/* Текст задачи */}
                     <div className="flex-1 min-w-0">
                       {" "}
                       {editingId === task.id ? (
@@ -255,7 +243,6 @@ function App() {
                       </div>
                     </div>
 
-                    {/* Действия */}
                     <div className="flex gap-2">
                       {editingId === task.id ? (
                         <Button
@@ -263,8 +250,7 @@ function App() {
                           size="icon"
                           className="h-9 w-9 text-green-600 hover:text-green-700 hover:bg-green-100 dark:hover:bg-green-900/30"
                           onClick={() => {
-                            taskList.editTask(task.id, editingText);
-                            setTasks([...taskList.getTasks()]);
+                            editTask(task.id, editingText);
                             setEditingId(null);
                           }}
                         >
@@ -285,8 +271,7 @@ function App() {
                       )}
                       <Button
                         onClick={() => {
-                          taskList.deleteTask(task.id);
-                          setTasks([...taskList.getTasks()]);
+                          deleteTask(task.id);
                         }}
                         variant="ghost"
                         size="icon"
@@ -302,7 +287,6 @@ function App() {
           )}
         </div>
 
-        {/* Статистика внизу */}
         {filteredTasks.length > 0 && (
           <div className="mt-8 text-center text-sm text-muted-foreground">
             Показано задач: {filteredTasks.length} из {totalCount}
@@ -310,7 +294,6 @@ function App() {
         )}
       </main>
 
-      {/* Footer */}
       <footer className="border-t mt-12">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
           <p>Odin — современный планировщик задач</p>
