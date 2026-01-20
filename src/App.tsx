@@ -4,8 +4,8 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { Calendar, Check, Edit2, Moon, Plus, Sun, Trash2 } from "lucide-react";
 
-import { RootState } from "./store";
-import { getTodos } from "./store/todoSlice";
+import { type RootState } from "./store";
+import { addTodo, getTodos } from "./store/todoSlice";
 // import { useTaskManager } from "./hooks/useTaskManager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,8 +33,11 @@ function App() {
     dispatch(getTodos({ page: 1, limit: 10, filter: "all" }));
   }, [dispatch]);
 
+  const addTask = async (text: string) => {
+    await dispatch(addTodo(text));
+  };
+
   // --- ВРЕМЕННЫЕ ЗАГЛУШКИ (чтобы код не ломался) ---
-  const addTask = (text: string) => console.log("Add:", text);
   const deleteTask = (id: number) => console.log("Delete:", id);
   const toggleTask = (id: number) => console.log("Toggle:", id);
   const editTask = (id: number, text: string) => console.log("Edit:", id, text);
@@ -71,9 +74,15 @@ function App() {
     }
 
     if (sortOrder === "newest") {
-      filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      filtered.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
     } else {
-      filtered.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      filtered.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
     }
 
     return filtered;
@@ -252,11 +261,14 @@ function App() {
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground">
-                          {task.createdAt.toLocaleDateString("ru-RU", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          })}
+                          {new Date(task.createdAt).toLocaleDateString(
+                            "ru-RU",
+                            {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            },
+                          )}
                         </span>
                       </div>
                     </div>
