@@ -1,8 +1,12 @@
 import { useState } from "react";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 import { Calendar, Check, Edit2, Moon, Plus, Sun, Trash2 } from "lucide-react";
 
-import { useTaskManager } from "./hooks/useTaskManager";
+import { RootState } from "./store";
+import { getTodos } from "./store/todoSlice";
+// import { useTaskManager } from "./hooks/useTaskManager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +23,21 @@ import {
 import "./App.css";
 
 function App() {
-  const { tasks, addTask, deleteTask, toggleTask, editTask } = useTaskManager();
+  const dispatch = useDispatch<any>();
+
+  const { todos: tasks, loading } = useSelector(
+    (state: RootState) => state.todos,
+  );
+
+  useEffect(() => {
+    dispatch(getTodos({ page: 1, limit: 10, filter: "all" }));
+  }, [dispatch]);
+
+  // --- ВРЕМЕННЫЕ ЗАГЛУШКИ (чтобы код не ломался) ---
+  const addTask = (text: string) => console.log("Add:", text);
+  const deleteTask = (id: number) => console.log("Delete:", id);
+  const toggleTask = (id: number) => console.log("Toggle:", id);
+  const editTask = (id: number, text: string) => console.log("Edit:", id, text);
 
   const [isDark, setIsDark] = useState(false);
   const [filter, setFilter] = useState("all");
@@ -190,8 +208,8 @@ function App() {
                 {filter === "all"
                   ? "Нет задач. Добавьте новую задачу!"
                   : filter === "completed"
-                  ? "Нет выполненных задач"
-                  : "Нет активных задач"}
+                    ? "Нет выполненных задач"
+                    : "Нет активных задач"}
               </p>
             </Card>
           ) : (
