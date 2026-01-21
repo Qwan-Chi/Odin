@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Calendar, Check, Edit2, Moon, Plus, Sun, Trash2 } from "lucide-react";
 
 import { type RootState } from "./store";
-import { addTodo, getTodos } from "./store/todoSlice";
+import { addTodo, deleteTodo, getTodos, updateTodo } from "./store/todoSlice";
 // import { useTaskManager } from "./hooks/useTaskManager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,10 +37,21 @@ function App() {
     await dispatch(addTodo(text));
   };
 
-  // --- ВРЕМЕННЫЕ ЗАГЛУШКИ (чтобы код не ломался) ---
-  const deleteTask = (id: number) => console.log("Delete:", id);
-  const toggleTask = (id: number) => console.log("Toggle:", id);
-  const editTask = (id: number, text: string) => console.log("Edit:", id, text);
+  const deleteTask = async (id: number) => {
+    await dispatch(deleteTodo(id));
+  };
+
+  const toggleTask = (id: number) => {
+    const task = tasks.find((t) => t.id === id);
+
+    if (task) {
+      dispatch(updateTodo({ id, completed: !task.completed }));
+    }
+  };
+
+  const editTask = (id: number, newText: string) => {
+    dispatch(updateTodo({ id, text: newText }));
+  };
 
   const [isDark, setIsDark] = useState(false);
   const [filter, setFilter] = useState("all");

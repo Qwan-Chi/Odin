@@ -4,7 +4,12 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 
-import { createTodo, fetchTodos } from "../api/todos";
+import {
+  createTodo,
+  deleteTodo as deleteTodoApi,
+  fetchTodos,
+  updateTodo as updateTodoApi,
+} from "../api/todos";
 
 export const getTodos = createAsyncThunk(
   "todos/fetchAll",
@@ -26,6 +31,29 @@ export const addTodo = createAsyncThunk("todos/add", async (text: string) => {
   const data = await createTodo(text);
   return data;
 });
+
+export const deleteTodo = createAsyncThunk(
+  "todos/delete",
+  async (id: number) => {
+    await deleteTodoApi(id);
+    return id;
+  },
+);
+
+export const updateTodo = createAsyncThunk(
+  "todos/update",
+  async ({
+    id,
+    ...changes
+  }: {
+    id: number;
+    text?: string;
+    completed?: boolean;
+  }) => {
+    const data = await updateTodoApi(id, changes);
+    return data;
+  },
+);
 
 interface Todo {
   id: number;
@@ -77,6 +105,20 @@ export const todoSlice = createSlice({
 
     builder.addCase(addTodo.fulfilled, (state, action) => {
       state.todos.unshift(action.payload);
+    });
+
+    builder.addCase(deleteTodo.fulfilled, (state, action) => {
+      state.todos = state.todos.filter((todo) => todo.id !== action.payload);
+    });
+
+    builder.addCase(updateTodo.fulfilled, (state, action) => {
+      const index = state.todos.findIndex(
+        (todo) => todo.id === action.payload.id,
+      );
+
+      if (index !== -1) {
+        state.todos[index] = action.payload;
+      }
     });
   },
 });
