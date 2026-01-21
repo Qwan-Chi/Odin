@@ -1,8 +1,12 @@
 import { useState } from "react";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 import { Calendar, Check, Edit2, Moon, Plus, Sun, Trash2 } from "lucide-react";
 
-import { useTaskManager } from "./hooks/useTaskManager";
+import { type RootState } from "./store";
+import { addTodo, deleteTodo, getTodos, updateTodo } from "./store/todoSlice";
+// import { useTaskManager } from "./hooks/useTaskManager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +23,35 @@ import {
 import "./App.css";
 
 function App() {
-  const { tasks, addTask, deleteTask, toggleTask, editTask } = useTaskManager();
+  const dispatch = useDispatch<any>();
+
+  const { todos: tasks, loading } = useSelector(
+    (state: RootState) => state.todos,
+  );
+
+  useEffect(() => {
+    dispatch(getTodos({ page: 1, limit: 10, filter: "all" }));
+  }, [dispatch]);
+
+  const addTask = async (text: string) => {
+    await dispatch(addTodo(text));
+  };
+
+  const deleteTask = async (id: number) => {
+    await dispatch(deleteTodo(id));
+  };
+
+  const toggleTask = (id: number) => {
+    const task = tasks.find((t) => t.id === id);
+
+    if (task) {
+      dispatch(updateTodo({ id, completed: !task.completed }));
+    }
+  };
+
+  const editTask = (id: number, newText: string) => {
+    dispatch(updateTodo({ id, text: newText }));
+  };
 
   const [isDark, setIsDark] = useState(false);
   const [filter, setFilter] = useState("all");
@@ -53,9 +85,15 @@ function App() {
     }
 
     if (sortOrder === "newest") {
-      filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      filtered.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
     } else {
-      filtered.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      filtered.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
     }
 
     return filtered;
@@ -190,8 +228,8 @@ function App() {
                 {filter === "all"
                   ? "Нет задач. Добавьте новую задачу!"
                   : filter === "completed"
-                  ? "Нет выполненных задач"
-                  : "Нет активных задач"}
+                    ? "Нет выполненных задач"
+                    : "Нет активных задач"}
               </p>
             </Card>
           ) : (
@@ -234,11 +272,14 @@ function App() {
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground">
-                          {task.createdAt.toLocaleDateString("ru-RU", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          })}
+                          {new Date(task.createdAt).toLocaleDateString(
+                            "ru-RU",
+                            {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            },
+                          )}
                         </span>
                       </div>
                     </div>
