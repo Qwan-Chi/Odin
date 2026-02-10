@@ -1,12 +1,10 @@
-import { useState } from "react";
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useEffect, useState } from "react";
 
 import { Calendar, Check, Edit2, Moon, Plus, Sun, Trash2 } from "lucide-react";
 
-import { type RootState } from "./store";
 import { addTodo, deleteTodo, getTodos, updateTodo } from "./store/todoSlice";
-// import { useTaskManager } from "./hooks/useTaskManager";
+import { selectTodosState } from "./store/selectors";
+import { useAppDispatch, useAppSelector } from "./store/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,22 +21,19 @@ import {
 import "./App.css";
 
 function App() {
-  const dispatch = useDispatch<any>();
-
-  const { todos: tasks, loading } = useSelector(
-    (state: RootState) => state.todos,
-  );
+  const dispatch = useAppDispatch();
+  const { todos: tasks } = useAppSelector(selectTodosState);
 
   useEffect(() => {
     dispatch(getTodos({ page: 1, limit: 10, filter: "all" }));
   }, [dispatch]);
 
-  const addTask = async (text: string) => {
-    await dispatch(addTodo(text));
+  const addTask = (text: string) => {
+    dispatch(addTodo(text));
   };
 
-  const deleteTask = async (id: number) => {
-    await dispatch(deleteTodo(id));
+  const deleteTask = (id: number) => {
+    dispatch(deleteTodo(id));
   };
 
   const toggleTask = (id: number) => {
@@ -60,6 +55,12 @@ function App() {
   const [isError, setIsError] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingText, setEditingText] = useState("");
+
+  const emptyStateMessage = (() => {
+    if (filter === "all") return "Нет задач. Добавьте новую задачу!";
+    if (filter === "completed") return "Нет выполненных задач";
+    return "Нет активных задач";
+  })();
 
   const addNewTask = () => {
     if (newTaskText.trim() === "") {
@@ -225,11 +226,7 @@ function App() {
           {filteredTasks.length === 0 ? (
             <Card className="p-12 text-center">
               <p className="text-muted-foreground text-lg">
-                {filter === "all"
-                  ? "Нет задач. Добавьте новую задачу!"
-                  : filter === "completed"
-                    ? "Нет выполненных задач"
-                    : "Нет активных задач"}
+                {emptyStateMessage}
               </p>
             </Card>
           ) : (
@@ -270,17 +267,23 @@ function App() {
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-1">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(task.createdAt).toLocaleDateString(
-                            "ru-RU",
-                            {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            },
-                          )}
-                        </span>
+                        {(() => {
+                          const formattedDate = new Date(
+                            task.createdAt,
+                          ).toLocaleDateString("ru-RU", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          });
+                          return (
+                            <>
+                              <Calendar className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">
+                                {formattedDate}
+                              </span>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 

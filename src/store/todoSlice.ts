@@ -5,11 +5,12 @@ import {
 } from "@reduxjs/toolkit";
 
 import {
-  createTodo,
+  createTodo as createTodoApi,
   deleteTodo as deleteTodoApi,
-  fetchTodos,
+  fetchTodos as fetchTodosApi,
   updateTodo as updateTodoApi,
 } from "../api/todos";
+import { type Todo, type TodoState } from "../types";
 
 export const getTodos = createAsyncThunk(
   "todos/fetchAll",
@@ -22,13 +23,13 @@ export const getTodos = createAsyncThunk(
     limit: number;
     filter: string;
   }) => {
-    const data = await fetchTodos(page, limit, filter);
+    const data = await fetchTodosApi(page, limit, filter);
     return data;
   },
 );
 
 export const addTodo = createAsyncThunk("todos/add", async (text: string) => {
-  const data = await createTodo(text);
+  const data = await createTodoApi(text);
   return data;
 });
 
@@ -54,22 +55,6 @@ export const updateTodo = createAsyncThunk(
     return data;
   },
 );
-
-interface Todo {
-  id: number;
-  text: string;
-  completed: boolean;
-  createdAt: string;
-}
-
-interface TodoState {
-  todos: Todo[];
-  page: number;
-  limit: number;
-  totalPages: number;
-  loading: boolean;
-  error: string | null;
-}
 
 const initialState: TodoState = {
   todos: [],
