@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Calendar, Check, Edit2, Moon, Plus, Sun, Trash2 } from "lucide-react";
 
-import { useTaskManager } from "./hooks/useTaskManager";
+import { addTodo, deleteTodo, getTodos, updateTodo } from "./store/todoSlice";
+import { selectTodosState } from "./store/selectors";
+import { useAppDispatch, useAppSelector } from "./store/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +21,32 @@ import {
 import "./App.css";
 
 function App() {
-  const { tasks, addTask, deleteTask, toggleTask, editTask } = useTaskManager();
+  const dispatch = useAppDispatch();
+  const { todos: tasks } = useAppSelector(selectTodosState);
+
+  useEffect(() => {
+    dispatch(getTodos({ page: 1, limit: 10, filter: "all" }));
+  }, [dispatch]);
+
+  const addTask = (text: string) => {
+    dispatch(addTodo(text));
+  };
+
+  const deleteTask = (id: number) => {
+    dispatch(deleteTodo(id));
+  };
+
+  const toggleTask = (id: number) => {
+    const task = tasks.find((t) => t.id === id);
+
+    if (task) {
+      dispatch(updateTodo({ id, completed: !task.completed }));
+    }
+  };
+
+  const editTask = (id: number, newText: string) => {
+    dispatch(updateTodo({ id, text: newText }));
+  };
 
   const [isDark, setIsDark] = useState(false);
   const [filter, setFilter] = useState("all");
@@ -28,6 +55,12 @@ function App() {
   const [isError, setIsError] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingText, setEditingText] = useState("");
+
+  const emptyStateMessage = (() => {
+    if (filter === "all") return "Нет задач. Добавьте новую задачу!";
+    if (filter === "completed") return "Нет выполненных задач";
+    return "Нет активных задач";
+  })();
 
   const addNewTask = () => {
     if (newTaskText.trim() === "") {
@@ -53,9 +86,15 @@ function App() {
     }
 
     if (sortOrder === "newest") {
-      filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      filtered.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
     } else {
-      filtered.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      filtered.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
     }
 
     return filtered;
@@ -187,11 +226,7 @@ function App() {
           {filteredTasks.length === 0 ? (
             <Card className="p-12 text-center">
               <p className="text-muted-foreground text-lg">
-                {filter === "all"
-                  ? "Нет задач. Добавьте новую задачу!"
-                  : filter === "completed"
-                  ? "Нет выполненных задач"
-                  : "Нет активных задач"}
+                {emptyStateMessage}
               </p>
             </Card>
           ) : (
@@ -232,14 +267,23 @@ function App() {
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-1">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
-                          {task.createdAt.toLocaleDateString("ru-RU", {
+                        {(() => {
+                          const formattedDate = new Date(
+                            task.createdAt,
+                          ).toLocaleDateString("ru-RU", {
                             day: "numeric",
                             month: "long",
                             year: "numeric",
-                          })}
-                        </span>
+                          });
+                          return (
+                            <>
+                              <Calendar className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">
+                                {formattedDate}
+                              </span>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 

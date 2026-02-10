@@ -1,9 +1,4 @@
-export interface Task {
-  id: number;
-  text: string;
-  completed: boolean;
-  createdAt: Date;
-}
+import { type Task } from "./types";
 
 export class TaskManager {
   private tasks: Task[];
@@ -23,12 +18,10 @@ export class TaskManager {
     }
   }
 
-  // Получить все задачи
   getTasks(): Task[] {
     return this.tasks;
   }
 
-  // Добавить новую задачу
   addTask(textTask: string) {
     this.tasks.push({
       id: this.tasks.length + 1,
@@ -39,18 +32,15 @@ export class TaskManager {
     this.saveTasks();
   }
 
-  // Сохранить задачи
   saveTasks() {
     localStorage.setItem("MyTasks", JSON.stringify(this.tasks));
   }
 
-  // Удаление задачи
   deleteTask(id: number) {
     this.tasks = this.tasks.filter((task) => task.id !== id);
     this.saveTasks();
   }
 
-  // Переключатель задач
   toggleTask(id: number) {
     const task = this.tasks.find((task) => task.id == id);
     if (task) {
@@ -59,7 +49,6 @@ export class TaskManager {
     this.saveTasks();
   }
 
-  // Редактирование задачи
   editTask(id: number, newText: string) {
     const task = this.tasks.find((task) => task.id == id);
     if (task) {
