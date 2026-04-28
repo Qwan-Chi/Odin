@@ -10,7 +10,7 @@ import {
   fetchTodos as fetchTodosApi,
   updateTodo as updateTodoApi,
 } from "../api/todos";
-import { type Todo, type TodoState } from "../types";
+import { type TodoState } from "../types";
 
 export const getTodos = createAsyncThunk(
   "todos/fetchAll",

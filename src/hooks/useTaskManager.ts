@@ -1,6 +1,7 @@
 import { useState } from "react";
 
-import { type Task, TaskManager } from "../TaskManager";
+import { TaskManager } from "../TaskManager";
+import { type Task } from "../types";
 
 const taskList = new TaskManager();
 export function useTaskManager() {

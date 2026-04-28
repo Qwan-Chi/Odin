@@ -1,4 +1,4 @@
-import { type Task } from "./types";
+import { type Task, type Todo } from "./types";
 
 export class TaskManager {
   private tasks: Task[];
@@ -9,7 +9,7 @@ export class TaskManager {
     if (storage) {
       const parsedTasks = JSON.parse(storage);
 
-      this.tasks = parsedTasks.map((task: any) => ({
+      this.tasks = parsedTasks.map((task: Todo) => ({
         ...task,
         createdAt: new Date(task.createdAt),
       }));

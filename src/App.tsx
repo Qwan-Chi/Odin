@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 
 import { Calendar, Check, Edit2, Moon, Plus, Sun, Trash2 } from "lucide-react";
 
-import { addTodo, deleteTodo, getTodos, updateTodo } from "./store/todoSlice";
-import { selectTodosState } from "./store/selectors";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
+import { selectTodosState } from "./store/selectors";
+import { addTodo, deleteTodo, getTodos, updateTodo } from "./store/todoSlice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
