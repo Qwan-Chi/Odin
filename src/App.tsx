@@ -1,350 +1,102 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Route, Routes } from "react-router-dom";
 
-import { Calendar, Check, Edit2, Moon, Plus, Sun, Trash2 } from "lucide-react";
-
-import { useAppDispatch, useAppSelector } from "./store/hooks";
-import { selectTodosState } from "./store/selectors";
-import { addTodo, deleteTodo, getTodos, updateTodo } from "./store/todoSlice";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/LoginPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import ProfilePage from "./pages/ProfilePage";
+import RegisterPage from "./pages/RegisterPage";
+import { API_ERROR_EVENT, AUTH_EXPIRED_EVENT } from "@/api/client";
+import { GuestRoute, ProtectedRoute } from "@/components/AuthRoutes";
+import { fetchUserProfile, logoutUser } from "@/store/authSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { selectAuthState } from "@/store/selectors";
 
 import "./App.css";
 
 function App() {
   const dispatch = useAppDispatch();
-  const { todos: tasks } = useAppSelector(selectTodosState);
+  const { token, user } = useAppSelector(selectAuthState);
+  const requestedProfileRef = useRef(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
-    dispatch(getTodos({ page: 1, limit: 10, filter: "all" }));
-  }, [dispatch]);
-
-  const addTask = (text: string) => {
-    dispatch(addTodo(text));
-  };
-
-  const deleteTask = (id: number) => {
-    dispatch(deleteTodo(id));
-  };
-
-  const toggleTask = (id: number) => {
-    const task = tasks.find((t) => t.id === id);
-
-    if (task) {
-      dispatch(updateTodo({ id, completed: !task.completed }));
-    }
-  };
-
-  const editTask = (id: number, newText: string) => {
-    dispatch(updateTodo({ id, text: newText }));
-  };
-
-  const [isDark, setIsDark] = useState(false);
-  const [filter, setFilter] = useState("all");
-  const [sortOrder, setSortOrder] = useState("newest");
-  const [newTaskText, setNewTaskText] = useState("");
-  const [isError, setIsError] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingText, setEditingText] = useState("");
-
-  const emptyStateMessage = (() => {
-    if (filter === "all") return "Нет задач. Добавьте новую задачу!";
-    if (filter === "completed") return "Нет выполненных задач";
-    return "Нет активных задач";
-  })();
-
-  const addNewTask = () => {
-    if (newTaskText.trim() === "") {
-      setIsError(true);
+    if (!token) {
+      requestedProfileRef.current = false;
       return;
     }
-    addTask(newTaskText);
-    setNewTaskText("");
-    setIsError(false);
-  };
 
-  const toggleTheme = () => {
-    setIsDark(!isDark);
-    document.documentElement.classList.toggle("dark");
-  };
-
-  const getFilteredTasks = () => {
-    let filtered = [...tasks];
-    if (filter === "completed") {
-      filtered = filtered.filter((task) => task.completed);
-    } else if (filter === "active") {
-      filtered = filtered.filter((task) => !task.completed);
+    if (!user && !requestedProfileRef.current) {
+      requestedProfileRef.current = true;
+      void dispatch(fetchUserProfile());
     }
+  }, [dispatch, token, user]);
 
-    if (sortOrder === "newest") {
-      filtered.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
-    } else {
-      filtered.sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      );
-    }
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      void dispatch(logoutUser());
+    };
 
-    return filtered;
-  };
+    const handleApiError = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
 
-  const filteredTasks = getFilteredTasks();
-  const completedCount = tasks.filter((t) => t.completed).length;
-  const totalCount = tasks.length;
+      setApiError(customEvent.detail);
+      window.setTimeout(() => setApiError(null), 5000);
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    window.addEventListener(API_ERROR_EVENT, handleApiError);
+
+    return () => {
+      window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+      window.removeEventListener(API_ERROR_EVENT, handleApiError);
+    };
+  }, [dispatch]);
 
   return (
-    <div className="min-h-screen bg-background transition-colors duration-300">
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
-                O
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">Odin</h1>
-                <p className="text-sm text-muted-foreground">
-                  Планировщик задач
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="text-sm">
-                {completedCount} / {totalCount} выполнено
-              </Badge>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={toggleTheme}
-                className="rounded-full"
-              >
-                {isDark ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
-          </div>
+    <>
+      {apiError && (
+        <div className="fixed left-1/2 top-4 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-lg border border-destructive/30 bg-destructive px-4 py-3 text-sm text-white shadow-lg">
+          {apiError}
         </div>
-      </header>
+      )}
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <Card className="mb-8 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Новая задача
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-3">
-              <Input
-                value={newTaskText}
-                onChange={(e) => setNewTaskText(e.target.value)}
-                placeholder="Введите текст задачи..."
-                className="flex-1"
-              />
-              <Button
-                className="px-6"
-                onClick={() => {
-                  addNewTask();
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Добавить
-              </Button>
-            </div>
-            {isError && (
-              <p className="text-sm text-muted-foreground mt-3">
-                Подсказка: поле не может быть пустым
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="flex flex-wrap gap-4 mb-6 items-center">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              Показать:
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant={filter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter("all")}
-              >
-                Все ({tasks.length})
-              </Button>
-              <Button
-                variant={filter === "active" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter("active")}
-              >
-                Активные ({tasks.filter((t) => !t.completed).length})
-              </Button>
-              <Button
-                variant={filter === "completed" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter("completed")}
-              >
-                Готовые ({completedCount})
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 ml-auto">
-            <span className="text-sm font-medium text-muted-foreground">
-              Сортировка:
-            </span>
-            <Select value={sortOrder} onValueChange={setSortOrder}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Новые сначала</SelectItem>
-                <SelectItem value="oldest">Старые сначала</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {filteredTasks.length === 0 ? (
-            <Card className="p-12 text-center">
-              <p className="text-muted-foreground text-lg">
-                {emptyStateMessage}
-              </p>
-            </Card>
-          ) : (
-            filteredTasks.map((task) => (
-              <Card
-                key={task.id}
-                className={`transition-all hover:shadow-md ${
-                  task.completed ? "opacity-75" : ""
-                }`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <Checkbox
-                      onCheckedChange={() => {
-                        toggleTask(task.id);
-                      }}
-                      checked={task.completed}
-                      className="h-5 w-5"
-                    />
-
-                    <div className="flex-1 min-w-0">
-                      {" "}
-                      {editingId === task.id ? (
-                        <Input
-                          value={editingText}
-                          onChange={(e) => setEditingText(e.target.value)}
-                          className="h-7 text-sm"
-                        />
-                      ) : (
-                        <p
-                          className={`text-base ${
-                            task.completed
-                              ? "line-through text-muted-foreground"
-                              : "text-foreground"
-                          }`}
-                        >
-                          {task.text}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 mt-1">
-                        {(() => {
-                          const formattedDate = new Date(
-                            task.createdAt,
-                          ).toLocaleDateString("ru-RU", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          });
-                          return (
-                            <>
-                              <Calendar className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground">
-                                {formattedDate}
-                              </span>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      {editingId === task.id ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-green-600 hover:text-green-700 hover:bg-green-100 dark:hover:bg-green-900/30"
-                          onClick={() => {
-                            editTask(task.id, editingText);
-                            setEditingId(null);
-                          }}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9"
-                          onClick={() => {
-                            setEditingText(task.text);
-                            setEditingId(task.id);
-                          }}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button
-                        onClick={() => {
-                          deleteTask(task.id);
-                        }}
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-
-        {filteredTasks.length > 0 && (
-          <div className="mt-8 text-center text-sm text-muted-foreground">
-            Показано задач: {filteredTasks.length} из {totalCount}
-          </div>
-        )}
-      </main>
-
-      <footer className="border-t mt-12">
-        <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-          <p>Odin — современный планировщик задач</p>
-          <p className="mt-1">Все данные сохраняются в localStorage</p>
-        </div>
-      </footer>
-    </div>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <LoginPage />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <RegisterPage />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </>
   );
 }
 

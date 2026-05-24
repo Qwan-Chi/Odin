@@ -10,56 +10,82 @@ import {
   fetchTodos as fetchTodosApi,
   updateTodo as updateTodoApi,
 } from "../api/todos";
-import { type TodoState } from "../types";
 
-export const getTodos = createAsyncThunk(
-  "todos/fetchAll",
-  async ({
-    page,
-    limit,
-    filter,
-  }: {
-    page: number;
-    limit: number;
-    filter: string;
-  }) => {
+import { getApiErrorMessage } from "@/api/client";
+import type { Todo, TodoResponse, TodoState } from "@/types";
+
+type FetchTodosArgs = {
+  page: number;
+  limit: number;
+  filter: string;
+};
+
+type UpdateTodoArgs = {
+  id: number;
+  text?: string;
+  completed?: boolean;
+};
+
+export const getTodos = createAsyncThunk<
+  TodoResponse,
+  FetchTodosArgs,
+  { rejectValue: string }
+>("todos/fetchAll", async ({ page, limit, filter }, { rejectWithValue }) => {
+  try {
     const data = await fetchTodosApi(page, limit, filter);
-    return data;
-  },
-);
 
-export const addTodo = createAsyncThunk("todos/add", async (text: string) => {
-  const data = await createTodoApi(text);
-  return data;
+    return data;
+  } catch (error) {
+    return rejectWithValue(getApiErrorMessage(error));
+  }
 });
 
-export const deleteTodo = createAsyncThunk(
-  "todos/delete",
-  async (id: number) => {
-    await deleteTodoApi(id);
-    return id;
+export const addTodo = createAsyncThunk<Todo, string, { rejectValue: string }>(
+  "todos/add",
+  async (text, { rejectWithValue }) => {
+    try {
+      const data = await createTodoApi(text);
+
+      return data;
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error));
+    }
   },
 );
 
-export const updateTodo = createAsyncThunk(
-  "todos/update",
-  async ({
-    id,
-    ...changes
-  }: {
-    id: number;
-    text?: string;
-    completed?: boolean;
-  }) => {
+export const deleteTodo = createAsyncThunk<
+  number,
+  number,
+  { rejectValue: string }
+>("todos/delete", async (id, { rejectWithValue }) => {
+  try {
+    await deleteTodoApi(id);
+
+    return id;
+  } catch (error) {
+    return rejectWithValue(getApiErrorMessage(error));
+  }
+});
+
+export const updateTodo = createAsyncThunk<
+  Todo,
+  UpdateTodoArgs,
+  { rejectValue: string }
+>("todos/update", async ({ id, ...changes }, { rejectWithValue }) => {
+  try {
     const data = await updateTodoApi(id, changes);
+
     return data;
-  },
-);
+  } catch (error) {
+    return rejectWithValue(getApiErrorMessage(error));
+  }
+});
 
 const initialState: TodoState = {
   todos: [],
   page: 1,
   limit: 10,
+  total: 0,
   totalPages: 0,
   loading: false,
   error: null,
@@ -81,21 +107,41 @@ export const todoSlice = createSlice({
     builder.addCase(getTodos.fulfilled, (state, action) => {
       state.loading = false;
       state.todos = action.payload.data;
+      state.total = action.payload.total;
+      state.page = action.payload.page;
+      state.limit = action.payload.limit;
       state.totalPages = action.payload.totalPages;
     });
     builder.addCase(getTodos.rejected, (state, action) => {
       state.loading = false;
-      state.error = action.error.message || "Ошибка загрузки";
+      state.error = action.payload ?? "Ошибка загрузки";
     });
 
+    builder.addCase(addTodo.pending, (state) => {
+      state.error = null;
+    });
     builder.addCase(addTodo.fulfilled, (state, action) => {
       state.todos.unshift(action.payload);
+      state.total += 1;
+    });
+    builder.addCase(addTodo.rejected, (state, action) => {
+      state.error = action.payload ?? "Ошибка создания задачи";
     });
 
+    builder.addCase(deleteTodo.pending, (state) => {
+      state.error = null;
+    });
     builder.addCase(deleteTodo.fulfilled, (state, action) => {
       state.todos = state.todos.filter((todo) => todo.id !== action.payload);
+      state.total = Math.max(0, state.total - 1);
+    });
+    builder.addCase(deleteTodo.rejected, (state, action) => {
+      state.error = action.payload ?? "Ошибка удаления задачи";
     });
 
+    builder.addCase(updateTodo.pending, (state) => {
+      state.error = null;
+    });
     builder.addCase(updateTodo.fulfilled, (state, action) => {
       const index = state.todos.findIndex(
         (todo) => todo.id === action.payload.id,
@@ -104,6 +150,9 @@ export const todoSlice = createSlice({
       if (index !== -1) {
         state.todos[index] = action.payload;
       }
+    });
+    builder.addCase(updateTodo.rejected, (state, action) => {
+      state.error = action.payload ?? "Ошибка обновления задачи";
     });
   },
 });
